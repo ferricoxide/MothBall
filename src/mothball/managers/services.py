@@ -87,7 +87,7 @@ class EBSManager(AWSConfigurationManager):
                 if not dry_run:
                     self._volume_snapshot(volume.volume_id)
             else:
-                logging.debug('VolumeId already exists!')
+                logging.debug('VolumeId {0} has already been backed up.'.format(dev['Ebs']['VolumeId']))
 
 
 class EIPManager(AWSConfigurationManager):
@@ -103,34 +103,36 @@ class EIPManager(AWSConfigurationManager):
         interfaces = self.ec2_session.Instance(instance_id).network_interfaces_attribute
 
         for interface in interfaces:
-            new_eip = EIP()
-            new_eip.AccountId = account_id
-            new_eip.instanceId = instance_id
+            if not self.db_session.session.query(EIP).filter_by(interfaceId=interface['NetworkInterfaceId']).all():
+                new_eip = EIP()
+                new_eip.AccountId = account_id
+                new_eip.instanceId = instance_id
 
-            nid = self.ec2_session.NetworkInterface(interface['NetworkInterfaceId'])
-            # new_eip.association = nid.association
-            # new_eip.assocAttr = nid.association_attribute
-            new_eip.attachment = nid.attachment
-            if new_eip.attachment and isinstance(new_eip.attachment, dict) and 'AttachTime' in new_eip.attachment:
-                new_eip.attachment['AttachTime'] = new_eip.attachment['AttachTime'].isoformat()
-            new_eip.description = nid.description
-            new_eip.groups = nid.groups
-            new_eip.interfaceId = nid.id
-            new_eip.type = nid.interface_type
-            new_eip.MACaddress = nid.mac_address
-            new_eip.owner = nid.owner_id
-            new_eip.privateIP = nid.private_ip_address
-            new_eip.privateIPs = nid.private_ip_addresses
-            new_eip.requester = nid.requester_id
-            new_eip.managed = nid.requester_managed
-            new_eip.SrcDstChk = nid.source_dest_check
-            new_eip.status = nid.status
-            new_eip.subnetId = nid.subnet_id
-            new_eip.tagSet = nid.tag_set
-            new_eip.vpcId = nid.vpc_id
+                nid = self.ec2_session.NetworkInterface(interface['NetworkInterfaceId'])
+                # new_eip.association = nid.association
+                # new_eip.assocAttr = nid.association_attribute
+                new_eip.attachment = nid.attachment
+                if new_eip.attachment and isinstance(new_eip.attachment, dict) and 'AttachTime' in new_eip.attachment:
+                    new_eip.attachment['AttachTime'] = new_eip.attachment['AttachTime'].isoformat()
+                new_eip.description = nid.description
+                new_eip.groups = nid.groups
+                new_eip.interfaceId = nid.id
+                new_eip.type = nid.interface_type
+                new_eip.MACaddress = nid.mac_address
+                new_eip.owner = nid.owner_id
+                new_eip.privateIP = nid.private_ip_address
+                new_eip.privateIPs = nid.private_ip_addresses
+                new_eip.requester = nid.requester_id
+                new_eip.managed = nid.requester_managed
+                new_eip.SrcDstChk = nid.source_dest_check
+                new_eip.status = nid.status
+                new_eip.subnetId = nid.subnet_id
+                new_eip.tagSet = nid.tag_set
+                new_eip.vpcId = nid.vpc_id
 
-            self.db_session.update(new_eip)
-
+                self.db_session.update(new_eip)
+            else:
+                logging.debug('Interface ID {0} has already been backed up.'.format(interface['NetworkInterfaceId']))
 
 class SecurityGroupManager(AWSConfigurationManager):
     """
@@ -161,7 +163,7 @@ class SecurityGroupManager(AWSConfigurationManager):
 
                 self.db_session.update(new_sg)
             else:
-                logging.debug('Security group already exists.')
+                logging.debug('Security group {0} has already been backed up.'.format(sg['GroupId']))
 
 
 class InstanceManager(AWSConfigurationManager):
@@ -176,10 +178,13 @@ class InstanceManager(AWSConfigurationManager):
 
         new_inst = Instances()
 
-        new_inst.AccountId = account_id
-        new_inst.instanceId = instance_id
+        if not self.db_session.session.query(Instances).filter_by(instanceId=instance_id).all():
+            new_inst.AccountId = account_id
+            new_inst.instanceId = instance_id
 
-        # TODO This needs to be corrected to the proper map.
-        new_inst.AvailabilityZone = ''
+            # TODO This needs to be corrected to the proper map.
+            new_inst.AvailabilityZone = ''
 
-        self.db_session.update(new_inst)
+            self.db_session.update(new_inst)
+        else:
+            logging.debug('Instance {0} has already been backed up.'.format(instance_id))

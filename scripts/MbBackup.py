@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os
 import yaml
 import logging
@@ -48,24 +50,24 @@ def main(filename, dryrun):
     """
 
     config = get_config(filename)
-    aws = AWSManager(region=config['AWS']['region'],
-                     key=config['AWS']['access_key'],
-                     secret=config['AWS']['secret_key'],
-                     username=config['Database']['username'],
-                     password=config['Database']['password'],
-                     dbname=config['Database']['name'],
-                     host=config['Database']['host'],
-                     port=config['Database']['port'],
-                     db_type=config['Database']['type'],
-                     dry_run=dryrun,
-                     rds_db=config['RDS']['use_rds'],
-                     rds_name=config['RDS']['name'],
+    aws = AWSManager(config['AWS']['region'],
+                     config['AWS']['access_key'],
+                     config['AWS']['secret_key'],
+                     config['Database']['username'],
+                     config['Database']['password'],
+                     config['Database']['name'],
+                     config['Database']['host'],
+                     config['Database']['port'],
+                     config['Database']['type'],
+                     dryrun,
+                     config['RDS']['use_rds'],
+                     config['RDS']['name'],
                      *config['RDS']['vpc_security_groups'])
 
     aws.get_account_info()
     aws.get_db_connection()
 
-    instances = aws.get_info()
+    instances = aws.backup_instances()
 
     aws.terminate(instances)
 
